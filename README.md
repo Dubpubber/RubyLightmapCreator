@@ -31,3 +31,5 @@ lm g v 10 w 524 h 591
 # Color variation, width+height set and color starting point
 lm g v 10 w 524 h 591 c #FFFFFF
 ```
+# Visualizing the LightMap
+I wrote a nifty little tool for converting this programs output to a visualized lightmap in your browser! Find that here: <a href="http://loneboat.com/tools/rlmcdecorder.php">RLMC Decoder</a>
