@@ -37,6 +37,7 @@
 =end
 
 require 'paleta'
+require 'binary_search/pure'
 
 module Constants
   MIN_V = 2
@@ -51,7 +52,7 @@ module Constants
   # 5 * 5 pixels
   MAX_SIZE = 5
 
-  DEFAULT_COLOR = 'FF9933'
+  DEFAULT_COLOR = '000099'
 
   COMMANDS_ALIAS = {
       :lightmap_command => %w(lm lightmap)
@@ -167,22 +168,78 @@ class RubyLightMapCreator
     # Thanks jordanstephens! https://github.com/jordanstephens/paleta
     # Makes my life SO much easier.
     color = Paleta::Color.new(:hex, lightmap_formula[3])
-    palette = Paleta::Palette.generate(:type => :tetrad, :from => :color, :size => lightmap_formula[0], :color => color)
+    palette = Paleta::Palette.generate(:type => :shades, :from => :color, :size => lightmap_formula[0], :color => color)
 
     color_chart = []
     max_x = lightmap_formula[1] / 5
     max_y = lightmap_formula[2] / 5
     color_chart[0] = [max_x, max_y, lightmap_formula[0], lightmap_formula[1], lightmap_formula[2], lightmap_formula[3]]
+    speckle_sort(lightmap_formula, max_x, max_y, color_chart, palette)
+
+  end
+
+  def populate_chart_with_color(max_x, max_y, color_chart, color)
+    for y in 1..max_y
+      row = Array.new(max_x)
+      for x in 0..max_x
+        row[x] = color
+      end
+      color_chart[y] = row
+    end
+  end
+
+  # Picks a color from the parameter based on weight
+  def pick(weight_array)
+    sum = 0
+    weight_array.each { |param|
+      sum += param[0]
+    }
+
+    ran = Random.new.rand(0..sum)
+    weight_array.binary_search { |v| ran <=> v[0] }
+  end
+
+=begin
+  Speckle sort is an algorithm that attempts to "sort" the color chart by randomness weight.
+  Step by Step:
+   - First, SS populates the entire color_chart with the dominate color.
+   - Then, SS asks for the weight of each palette color.
+   - After, using the newly acquired weights, SS will generate a lightmap from the given code.
+=end
+  def speckle_sort(lightmap_formula, max_x, max_y, color_chart, palette)
+    populate_chart_with_color(max_x, max_y, color_chart, lightmap_formula[3])
+
+    @weight_classes = []
+    palette.each_with_index { |param, index|
+      input = nil
+      until input.is_a?(Fixnum) do
+        print "Please enter a random weight for color #{param.hex}: "
+        begin
+          input = Integer(gets)
+          @weight_classes[index] = [input, param.hex]
+          puts "Added weight (#{input}) for #{param.hex} successfully!"
+        rescue ArgumentError
+          puts 'That wasn\'t a number. Please enter a number.'
+          input = nil
+        end
+      end
+    }
+
+    puts "Done. Finalized size: #{@weight_classes.length}"
+    @weight_classes.sort
 
     for y in 1..max_y
       row = Array.new(max_x)
       for x in 0..max_x
-        row[x] = palette.colors.sample.hex
+
       end
       color_chart[y] = row
     end
 
-    print_color_chart(color_chart)
+    100.times do
+      out = pick(@weight_classes)
+      puts "Iteration: #{out}"
+    end
 
   end
 
@@ -191,6 +248,16 @@ class RubyLightMapCreator
       p row
     }
   end
+
+  def write_to_file(color_chart)
+    File.open('out.txt', 'w') { |file|
+      color_chart.each { |row|
+        file.write(row)
+      }
+    }
+  end
+
+
 
 end
 
